@@ -1,4 +1,4 @@
-package com.thepublichistorian.heritagehunter.ui.gallery
+package com.thepublichistorian.heritagehunter.ui.achievements
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,11 +7,11 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.thepublichistorian.heritagehunter.databinding.FragmentGalleryBinding
+import com.thepublichistorian.heritagehunter.databinding.FragmentAchievementsBinding
 
-class GalleryFragment : Fragment() {
+class AchievementsFragment : Fragment() {
 
-    private var _binding: FragmentGalleryBinding? = null
+    private var _binding: FragmentAchievementsBinding? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -22,14 +22,14 @@ class GalleryFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val galleryViewModel =
-            ViewModelProvider(this).get(GalleryViewModel::class.java)
+        val achievementsViewModel =
+            ViewModelProvider(this).get(AchievementsViewModel::class.java)
 
-        _binding = FragmentGalleryBinding.inflate(inflater, container, false)
+        _binding = FragmentAchievementsBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
         val textView: TextView = binding.textGallery
-        galleryViewModel.text.observe(viewLifecycleOwner) {
+        achievementsViewModel.text.observe(viewLifecycleOwner) {
             textView.text = it
         }
         return root

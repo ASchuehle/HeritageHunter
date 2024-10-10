@@ -1,0 +1,40 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <!-- Das Icon (links), nimmt die gesamte Höhe des Eintrags ein -->
+    <ImageView
+        android:id="@+id/place_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="@string/place_icon_desc"
+        android:scaleType="fitCenter" />
+
+    <!-- Textcontainer für Name und Anzahl der Besuche -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_weight="1">
+
+        <!-- Name des Ortes -->
+        <TextView
+            android:id="@+id/place_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <!-- Anzahl der Besuche -->
+        <TextView
+            android:id="@+id/place_counter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Besuche: 0" />
+
+    </LinearLayout>
+
+</LinearLayout>

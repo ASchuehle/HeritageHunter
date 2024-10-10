@@ -5,9 +5,11 @@
     <string name="nav_header_title">Heritage Hunter</string>
     <string name="nav_header_subtitle">admin@thepublichistorian.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
 
+    <string name="menu_settings">Einstellungen</string>
     <string name="menu_home">Home</string>
     <string name="menu_achievements">Erfolge</string>
     <string name="menu_slideshow">Slideshow</string>
+
+    <string name="place_icon_desc">Icon für den Ort</string>
 </resources>

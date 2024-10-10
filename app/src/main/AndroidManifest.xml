@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Berechtigungen für den Standort -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Berechtigung für Internetzugang, notwendig für Firebase und Google Login -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,6 +19,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HeritageHunter"
         tools:targetApi="31">
+
+        <!-- MainActivity: Startpunkt der App -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -19,10 +28,17 @@
             android:theme="@style/Theme.HeritageHunter.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- SignInActivity für Google Login -->
+        <activity
+            android:name=".SignInActivity"
+            android:exported="true"
+            android:label="Google Login"
+            android:theme="@style/Theme.HeritageHunter.NoActionBar" />
+
     </application>
 
 </manifest>

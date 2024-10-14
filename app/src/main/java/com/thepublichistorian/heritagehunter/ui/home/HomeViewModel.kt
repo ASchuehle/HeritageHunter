@@ -11,25 +11,30 @@ import android.util.Log
 class HomeViewModel : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
-    private val _places = MutableLiveData<List<Place>>()
-    val places: LiveData<List<Place>> = _places
+
+    // Die Liste enthält jetzt Paare aus Dokument-ID und dem Place-Objekt
+    private val _places = MutableLiveData<List<Pair<String, Place>>>()
+    val places: LiveData<List<Pair<String, Place>>> = _places
 
     // Abrufen der Orte aus Firebase und Sortieren nach Entfernung
     fun fetchPlaces(userLatitude: Double, userLongitude: Double) {
         firestore.collection("places")
             .get()
             .addOnSuccessListener { snapshot ->
-                val placesList = mutableListOf<Place>()
+                val placesList = mutableListOf<Pair<String, Place>>()
+
                 for (document in snapshot) {
-                    // Debugging: Logge die Dokument-ID
-                    Log.d("HomeViewModel", "Document ID: ${document.id}")
+                    // Dokument-ID abrufen
+                    val placeId = document.id
 
-                    // Hole die Daten für jedes Dokument
+                    // Hole die Daten für jedes Dokument als Place-Objekt
                     val place = document.toObject(Place::class.java)
-                    placesList.add(place)
 
-                    // Debugging: Zeige die Details jedes Ortes
-                    Log.d("HomeViewModel", "Place found: ${place.name}, Latitude: ${place.latitude}, Longitude: ${place.longitude}")
+                    // Füge die Dokument-ID zusammen mit dem Place in die Liste ein
+                    placesList.add(Pair(placeId, place))
+
+                    // Debugging: Logge die Details jedes Ortes
+                    Log.d("HomeViewModel", "Place found: ${place.name}, Latitude: ${place.latitude}, Longitude: ${place.longitude}, Document ID: $placeId")
                 }
 
                 // Falls keine Orte gefunden wurden, logge dies
@@ -40,7 +45,7 @@ class HomeViewModel : ViewModel() {
                 }
 
                 // Sortiere die Orte nach Entfernung vom Nutzerstandort
-                val sortedPlaces = placesList.sortedBy { place ->
+                val sortedPlaces = placesList.sortedBy { (placeId, place) ->
                     val results = FloatArray(1)
                     Location.distanceBetween(
                         userLatitude, userLongitude,
@@ -53,7 +58,7 @@ class HomeViewModel : ViewModel() {
                 // Zeige die Anzahl der nächsten 10 Orte im Log
                 Log.d("HomeViewModel", "Nearest 10 places: ${sortedPlaces.take(10).size}")
 
-                // Setze die 10 nächsten Orte
+                // Setze die 10 nächsten Orte (Pair aus placeId und Place)
                 _places.value = sortedPlaces.take(10)
             }
             .addOnFailureListener { exception ->

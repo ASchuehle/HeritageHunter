@@ -12,4 +12,15 @@
     <string name="menu_slideshow">Slideshow</string>
 
     <string name="place_icon_desc">Icon für den Ort</string>
+    <string name="add_new_place">Neuen Ort hinzufügen</string>
+
+    <string-array name="place_categories">
+        <item>Museum</item>
+        <item>Denkmal</item>
+        <item>Gedenkstätte</item>
+        <item>Schloss/ Burg</item>
+        <item>Industriedenkmal</item>
+        <item>Religiöse Stätte</item>
+        <item>Historische Stätte</item>
+    </string-array>
 </resources>

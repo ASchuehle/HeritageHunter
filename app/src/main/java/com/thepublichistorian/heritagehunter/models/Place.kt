@@ -7,6 +7,6 @@ data class Place(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val counter: Int = 0,
-    val visitors: String = "",             // Feld für visitors
+    val visitors: List<String> = listOf(),
     val category: String = ""
 )

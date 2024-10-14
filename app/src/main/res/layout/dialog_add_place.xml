@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Eingabefeld für den Ortsnamen -->
+    <TextView
+        android:id="@+id/place_name_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ortsname"
+        android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+    <EditText
+        android:id="@+id/place_name_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Gib den Namen des Ortes ein"
+        android:inputType="text"
+        android:importantForAccessibility="yes" />
+
+    <!-- Dropdown (Spinner) für die Kategorie des Ortes -->
+    <TextView
+        android:id="@+id/category_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Kategorie"
+        android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+    <Spinner
+        android:id="@+id/category_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/place_categories"
+        android:importantForAccessibility="yes" />
+
+</LinearLayout>

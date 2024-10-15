@@ -16,7 +16,21 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
-            app:popupTheme="@style/Theme.HeritageHunter.PopupOverlay" />
+            app:popupTheme="@style/Theme.HeritageHunter.PopupOverlay">
+
+            <!-- TextView für die Anzeige des Levels -->
+            <TextView
+                android:id="@+id/user_level"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="Level 1"
+                android:textSize="16sp"
+                android:textColor="@android:color/white"
+                android:paddingEnd="16dp"
+                android:gravity="end" />
+
+        </androidx.appcompat.widget.Toolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -31,6 +45,5 @@
         android:layout_marginBottom="16dp"
         app:srcCompat="@drawable/ic_add"
         app:tint="@android:color/white" />
-
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

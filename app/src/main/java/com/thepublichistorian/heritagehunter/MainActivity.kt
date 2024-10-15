@@ -28,6 +28,8 @@ import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import android.Manifest
 import com.thepublichistorian.heritagehunter.ui.home.HomeFragment
+import com.thepublichistorian.heritagehunter.models.Place
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var auth: FirebaseAuth
     private lateinit var fusedLocationClient: FusedLocationProviderClient // FusedLocationClient hinzufügen
+    private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialisiere den FusedLocationProviderClient
+                // Initialisiere den FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         // FAB referenzieren und Klick-Listener setzen
@@ -56,6 +59,9 @@ class MainActivity : AppCompatActivity() {
 
         // Initialisiere Firebase Auth
         auth = FirebaseAuth.getInstance()
+
+        // Aktualisiere die Anzeige des Levels in der Toolbar
+        updateUserLevelDisplay()
 
         // Überprüfe, ob der Nutzer eingeloggt ist
         val currentUser = auth.currentUser
@@ -154,6 +160,113 @@ class MainActivity : AppCompatActivity() {
                 // Berechtigung nicht erteilt, zeige eine Warnung oder fordere sie an
                 Toast.makeText(this, "Standortberechtigung nicht erteilt", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    // Methode zum Einloggen eines Besuchs und zur Punktevergabe
+    private fun logVisit(placeId: String, place: Place, userId: String) {
+        val placeRef = db.collection("places").document(placeId)
+        val userRef = db.collection("users").document(userId)
+
+        db.runTransaction { transaction ->
+            // Ort abrufen
+            val placeSnapshot = transaction.get(placeRef)
+            val currentVisitors = placeSnapshot.get("visitors") as? MutableList<String> ?: mutableListOf()
+            val currentCounter = placeSnapshot.getLong("counter") ?: 0
+
+            // Prüfen, ob der Nutzer den Ort bereits besucht hat
+            if (!currentVisitors.contains(userId)) {
+                // Füge den Nutzer zu den Besuchern hinzu und erhöhe den Counter
+                currentVisitors.add(userId)
+                transaction.update(placeRef, "visitors", currentVisitors)
+                transaction.update(placeRef, "counter", currentCounter + 1)
+
+                // Berechne die Punkte basierend auf der Anzahl der Besucher
+                val pointsToAdd = when {
+                    currentCounter < 5 -> 8  // Erster bis fünfter Besucher
+                    currentCounter < 10 -> 6  // Sechster bis zehnter Besucher
+                    currentCounter < 50 -> 4  // Elfter bis fünfzigster Besucher
+                    currentCounter < 100 -> 2  // Einundfünfzigster bis hundertster Besucher
+                    else -> 1  // Alle weiteren Besucher
+                }
+
+                // Nutzer aktualisieren und Punkte hinzufügen
+                val userSnapshot = transaction.get(userRef)
+                val currentPoints = userSnapshot.getLong("points") ?: 0
+                val newPoints = currentPoints + pointsToAdd
+
+                transaction.update(userRef, "points", newPoints)
+
+                // Logge den Besuch bei diesem Ort für den Nutzer
+                val userPlacesLogged = userSnapshot.get("placesLogged") as? MutableMap<String, Any> ?: mutableMapOf()
+                userPlacesLogged[placeId] = mapOf("visits" to (currentCounter + 1), "pointsEarned" to pointsToAdd)
+                transaction.update(userRef, "placesLogged", userPlacesLogged)
+
+                // Erfolgsmeldung
+                Toast.makeText(this, "Besuch eingeloggt! Du hast $pointsToAdd Punkte erhalten.", Toast.LENGTH_SHORT).show()
+            } else {
+                // Der Nutzer hat den Ort bereits besucht
+                Toast.makeText(this, "Du hast diesen Ort bereits besucht.", Toast.LENGTH_SHORT).show()
+            }
+        }.addOnFailureListener {
+            // Fehlermeldung
+            Toast.makeText(this, "Fehler beim Einloggen des Besuchs.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    // Funktion zur Berechnung des Levels basierend auf den Punkten
+    private fun calculateLevel(totalPoints: Long): Int {
+        return when {
+            totalPoints >= 10000 -> 10
+            totalPoints >= 5000 -> 9
+            totalPoints >= 2500 -> 8
+            totalPoints >= 1000 -> 7
+            totalPoints >= 500 -> 6
+            totalPoints >= 250 -> 5
+            totalPoints >= 100 -> 4
+            totalPoints >= 50 -> 3
+            totalPoints >= 20 -> 2
+            else -> 1
+        }
+    }
+
+    private fun updateUserLevelAndPoints(uid: String, pointsToAdd: Int) {
+        val userRef = db.collection("users").document(uid)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(userRef)
+            val currentPoints = snapshot.getLong("points") ?: 0
+            val currentLevel = snapshot.getLong("level")?.toInt() ?: 1
+            val newTotalPoints = currentPoints + pointsToAdd
+
+            val newLevel = calculateLevel(newTotalPoints)
+
+            transaction.update(userRef, mapOf(
+                "points" to newTotalPoints,
+                "level" to newLevel
+            ))
+
+            if (newLevel > currentLevel) {
+                showLevelUpNotification(newLevel)  // this wird als Kontext verwendet
+            }
+        }.addOnSuccessListener {
+            Toast.makeText(this, "Punkte und Level aktualisiert!", Toast.LENGTH_SHORT).show()
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showLevelUpNotification(newLevel: Int) {
+        Toast.makeText(this, "Glückwunsch! Du hast Level $newLevel erreicht!", Toast.LENGTH_LONG).show()
+    }
+    private fun updateUserLevelDisplay() {
+        val userRef = db.collection("users").document(auth.currentUser?.uid ?: "")
+        userRef.get().addOnSuccessListener { document ->
+            if (document != null) {
+                val userLevel = document.getLong("level") ?: 1
+                val levelTextView: TextView = findViewById(R.id.user_level)
+                levelTextView.text = "Level $userLevel"
+            }
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "Fehler beim Abrufen des Levels", Toast.LENGTH_SHORT).show()
         }
     }
 }

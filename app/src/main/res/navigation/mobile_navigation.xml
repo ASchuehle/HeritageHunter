@@ -22,4 +22,10 @@
         android:name="com.thepublichistorian.heritagehunter.ui.slideshow.SlideshowFragment"
         android:label="@string/menu_slideshow"
         tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.thepublichistorian.heritagehunter.ui.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@xml/preferences"/>
 </navigation>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Beispiel für eine einfache Einstellung -->
+    <EditTextPreference
+        android:key="username"
+        android:title="Benutzername"
+        android:summary="Deinen Benutzernamen ändern"
+        android:inputType="text" />
+
+    <SwitchPreferenceCompat
+        android:key="notifications"
+        android:title="Benachrichtigungen aktivieren"
+        android:summary="Benachrichtigungen ein- oder ausschalten"
+        android:defaultValue="true" />
+
+</androidx.preference.PreferenceScreen>

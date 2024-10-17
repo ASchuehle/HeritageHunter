@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.firebase:firebase-firestore-ktx:24.7.1")
+    implementation(libs.androidx.legacy.support.v4)
+    implementation(libs.androidx.fragment.ktx)
     testImplementation(libs.junit)
     implementation ("com.google.firebase:firebase-auth:21.1.0")
     implementation ("com.google.android.gms:play-services-auth:20.1.0")

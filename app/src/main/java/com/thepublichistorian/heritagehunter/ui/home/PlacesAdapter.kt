@@ -13,11 +13,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.thepublichistorian.heritagehunter.R
 import com.thepublichistorian.heritagehunter.models.Place
+import com.thepublichistorian.heritagehunter.MainActivity
+import android.util.Log
 
 class PlacesAdapter(
     private val placesWithIds: List<Pair<String, Place>>,
     private val userLatitude: Double,
-    private val userLongitude: Double
+    private val userLongitude: Double,
+    private val activity: MainActivity // MainActivity hinzufügen
 ) : RecyclerView.Adapter<PlacesAdapter.PlaceViewHolder>() {
 
     private val auth = FirebaseAuth.getInstance()
@@ -28,7 +31,7 @@ class PlacesAdapter(
         val counterTextView: TextView = itemView.findViewById(R.id.place_counter)
         val distanceTextView: TextView = itemView.findViewById(R.id.place_distance)
         val iconImageView: ImageView = itemView.findViewById(R.id.place_icon)
-        val targetIconImageView: ImageView = itemView.findViewById(R.id.place_target_icon) // Das neue Icon
+        val targetIconImageView: ImageView = itemView.findViewById(R.id.place_target_icon)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlaceViewHolder {
@@ -40,17 +43,14 @@ class PlacesAdapter(
         val (placeId, place) = placesWithIds[position]
         val context = holder.itemView.context
 
-        // Setze den Namen und die Anzahl der Besuche
         holder.nameTextView.text = place.name
         holder.counterTextView.text = "Besuche: ${place.counter}"
 
-        // Berechne die Entfernung zwischen dem Nutzer und dem Ort
         val results = FloatArray(1)
         Location.distanceBetween(userLatitude, userLongitude, place.latitude, place.longitude, results)
         val distanceInMeters = results[0]
         holder.distanceTextView.text = String.format("Entfernung: %.2f km", distanceInMeters / 1000)
 
-        // Kategorie prüfen und das entsprechende Icon setzen
         when (place.category) {
             "Museum" -> holder.iconImageView.setImageResource(R.drawable.ic_museum)
             "Denkmal" -> holder.iconImageView.setImageResource(R.drawable.ic_memorial)
@@ -59,10 +59,9 @@ class PlacesAdapter(
             "Schloss/ Burg" -> holder.iconImageView.setImageResource(R.drawable.ic_castle)
             "Industriedenkmal" -> holder.iconImageView.setImageResource(R.drawable.ic_industrialmonument)
             "Religiöse Stätte" -> holder.iconImageView.setImageResource(R.drawable.ic_religioussite)
-            else -> holder.iconImageView.setImageResource(R.drawable.ic_default)
+            else -> holder.iconImageView.setImageResource(R.drawable.ic_default)  // Standard-Icon, wenn die Kategorie nicht passt
         }
 
-        // Überprüfe, ob der Nutzer eingeloggt ist und der Ort im Umkreis von 50 Metern liegt
         val currentUser = auth.currentUser
         if (currentUser != null) {
             val uid = currentUser.uid
@@ -72,20 +71,18 @@ class PlacesAdapter(
                 if (document.exists()) {
                     val visitors = document.get("visitors") as? List<String>
                     if (visitors != null && visitors.contains(uid)) {
-                        // Nutzer hat den Ort bereits besucht
                         holder.itemView.setBackgroundColor(
                             ContextCompat.getColor(context, R.color.accent)
                         )
-                        holder.targetIconImageView.visibility = View.GONE // Icon ausblenden, da bereits besucht
+                        holder.targetIconImageView.visibility = View.GONE
                     } else {
-                        // Nutzer hat den Ort noch nicht besucht
                         holder.itemView.setBackgroundColor(
                             ContextCompat.getColor(context, R.color.primary)
                         )
                         if (distanceInMeters <= 50) {
                             holder.targetIconImageView.visibility = View.VISIBLE
                             holder.targetIconImageView.setOnClickListener {
-                                logVisit(placeId, place, holder)
+                                activity.logVisit(placeId, place, uid) // Aufruf der logVisit Methode in MainActivity
                             }
                         } else {
                             holder.targetIconImageView.visibility = View.GONE
@@ -96,12 +93,12 @@ class PlacesAdapter(
         }
     }
 
-    // Methode zum Einloggen eines Besuchs
     private fun logVisit(placeId: String, place: Place, holder: PlaceViewHolder) {
         val currentUser = auth.currentUser
         if (currentUser != null) {
             val uid = currentUser.uid
             val placeRef = db.collection("places").document(placeId)
+            val userRef = db.collection("users").document(uid)
 
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(placeRef)
@@ -113,6 +110,27 @@ class PlacesAdapter(
                     visitors.add(uid)
                     transaction.update(placeRef, "visitors", visitors)
                     transaction.update(placeRef, "counter", currentCounter + 1)
+
+                    // Berechne die Punkte basierend auf der Anzahl der Besucher
+                    val pointsToAdd = when {
+                        currentCounter < 5 -> 8  // Erster bis fünfter Besucher
+                        currentCounter < 10 -> 6  // Sechster bis zehnter Besucher
+                        currentCounter < 50 -> 4  // Elfter bis fünfzigster Besucher
+                        currentCounter < 100 -> 2  // Einundfünfzigster bis hundertster Besucher
+                        else -> 1  // Alle weiteren Besucher
+                    }
+
+                    // Füge die Punkte zum Nutzer hinzu
+                    val userSnapshot = transaction.get(userRef)
+                    val currentPoints = userSnapshot.getLong("points") ?: 0
+                    val newPoints = currentPoints + pointsToAdd
+
+                    transaction.update(userRef, "points", newPoints)
+
+                    // Logge den Besuch bei diesem Ort für den Nutzer
+                    val userPlacesLogged = userSnapshot.get("placesLogged") as? MutableMap<String, Any> ?: mutableMapOf()
+                    userPlacesLogged[placeId] = mapOf("visits" to (currentCounter + 1), "pointsEarned" to pointsToAdd)
+                    transaction.update(userRef, "placesLogged", userPlacesLogged)
                 }
             }.addOnSuccessListener {
                 // Aktualisiere das UI erst, nachdem der Besuch erfolgreich in der DB eingetragen wurde
@@ -124,9 +142,11 @@ class PlacesAdapter(
                     ContextCompat.getColor(holder.itemView.context, R.color.accent)
                 )
 
-                Toast.makeText(holder.itemView.context, "Besuch erfolgreich eingeloggt!", Toast.LENGTH_SHORT).show()
-            }.addOnFailureListener {
-                Toast.makeText(holder.itemView.context, "Fehler beim Einloggen des Besuchs", Toast.LENGTH_SHORT).show()
+                Toast.makeText(holder.itemView.context, "Besuch eingeloggt! Punkte wurden gutgeschrieben.", Toast.LENGTH_SHORT).show()
+            }.addOnFailureListener { exception ->
+                // Hier detaillierte Informationen ins Logcat schreiben
+                Log.e("PlacesAdapter", "Fehler beim Einloggen des Besuchs: ", exception)
+                Toast.makeText(holder.itemView.context, "Fehler beim Einloggen des Besuchs.", Toast.LENGTH_SHORT).show()
             }
         }
     }

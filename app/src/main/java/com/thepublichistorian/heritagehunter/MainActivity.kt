@@ -30,6 +30,7 @@ import android.Manifest
 import com.thepublichistorian.heritagehunter.ui.home.HomeFragment
 import com.thepublichistorian.heritagehunter.models.Place
 import android.widget.TextView
+import android.util.Log
 
 class MainActivity : AppCompatActivity() {
 
@@ -81,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         // menu should be considered as top-level destinations.
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
+                R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow, R.id.nav_settings
             ), drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
@@ -139,15 +140,29 @@ class MainActivity : AppCompatActivity() {
                             "visitors" to listOf(uid)
                         )
 
+                        // Ort zur Firebase hinzufügen
                         FirebaseFirestore.getInstance().collection("places")
                             .add(place)
                             .addOnSuccessListener {
                                 Toast.makeText(this, "Ort hinzugefügt", Toast.LENGTH_SHORT).show()
 
+                                // Füge 10 Punkte zum Nutzer hinzu
+                                val userRef = db.collection("users").document(uid)
+                                db.runTransaction { transaction ->
+                                    val snapshot = transaction.get(userRef)
+                                    val currentPoints = snapshot.getLong("points") ?: 0
+                                    val newPoints = currentPoints + 10  // 10 Punkte für das Hinzufügen eines neuen Ortes
+
+                                    transaction.update(userRef, "points", newPoints)
+                                }.addOnSuccessListener {
+                                    Toast.makeText(this, "10 Punkte hinzugefügt!", Toast.LENGTH_SHORT).show()
+                                }.addOnFailureListener {
+                                    Toast.makeText(this, "Fehler beim Hinzufügen der Punkte", Toast.LENGTH_SHORT).show()
+                                }
+
                                 // Orte neu laden, nachdem der neue Ort hinzugefügt wurde
                                 val homeFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? HomeFragment
                                 homeFragment?.refreshPlaces()  // Methode zum Neuladen der Orte aufrufen
-
                             }
                             .addOnFailureListener {
                                 Toast.makeText(this, "Fehler beim Hinzufügen des Ortes", Toast.LENGTH_SHORT).show()
@@ -162,68 +177,65 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    // Methode zum Einloggen eines Besuchs und zur Punktevergabe
-    private fun logVisit(placeId: String, place: Place, userId: String) {
+
+    fun logVisit(placeId: String, place: Place, userId: String) {
         val placeRef = db.collection("places").document(placeId)
         val userRef = db.collection("users").document(userId)
 
         db.runTransaction { transaction ->
-            // Ort abrufen
+            // Zuerst alle benötigten Daten lesen
             val placeSnapshot = transaction.get(placeRef)
+            val userSnapshot = transaction.get(userRef)
+
+            // Leseoperationen abgeschlossen, jetzt Schreiboperationen durchführen
             val currentVisitors = placeSnapshot.get("visitors") as? MutableList<String> ?: mutableListOf()
             val currentCounter = placeSnapshot.getLong("counter") ?: 0
 
-            // Prüfen, ob der Nutzer den Ort bereits besucht hat
             if (!currentVisitors.contains(userId)) {
-                // Füge den Nutzer zu den Besuchern hinzu und erhöhe den Counter
                 currentVisitors.add(userId)
                 transaction.update(placeRef, "visitors", currentVisitors)
                 transaction.update(placeRef, "counter", currentCounter + 1)
 
                 // Berechne die Punkte basierend auf der Anzahl der Besucher
                 val pointsToAdd = when {
-                    currentCounter < 5 -> 8  // Erster bis fünfter Besucher
-                    currentCounter < 10 -> 6  // Sechster bis zehnter Besucher
-                    currentCounter < 50 -> 4  // Elfter bis fünfzigster Besucher
-                    currentCounter < 100 -> 2  // Einundfünfzigster bis hundertster Besucher
-                    else -> 1  // Alle weiteren Besucher
+                    currentCounter < 5 -> 8
+                    currentCounter < 10 -> 6
+                    currentCounter < 50 -> 4
+                    currentCounter < 100 -> 2
+                    else -> 1
                 }
 
-                // Nutzer aktualisieren und Punkte hinzufügen
-                val userSnapshot = transaction.get(userRef)
                 val currentPoints = userSnapshot.getLong("points") ?: 0
                 val newPoints = currentPoints + pointsToAdd
 
+                // Punkte des Nutzers aktualisieren
                 transaction.update(userRef, "points", newPoints)
 
                 // Logge den Besuch bei diesem Ort für den Nutzer
                 val userPlacesLogged = userSnapshot.get("placesLogged") as? MutableMap<String, Any> ?: mutableMapOf()
                 userPlacesLogged[placeId] = mapOf("visits" to (currentCounter + 1), "pointsEarned" to pointsToAdd)
                 transaction.update(userRef, "placesLogged", userPlacesLogged)
-
-                // Erfolgsmeldung
-                Toast.makeText(this, "Besuch eingeloggt! Du hast $pointsToAdd Punkte erhalten.", Toast.LENGTH_SHORT).show()
-            } else {
-                // Der Nutzer hat den Ort bereits besucht
-                Toast.makeText(this, "Du hast diesen Ort bereits besucht.", Toast.LENGTH_SHORT).show()
             }
-        }.addOnFailureListener {
-            // Fehlermeldung
-            Toast.makeText(this, "Fehler beim Einloggen des Besuchs.", Toast.LENGTH_SHORT).show()
+        }.addOnSuccessListener {
+            Toast.makeText(this, "Besuch erfolgreich eingeloggt! Punkte wurden gutgeschrieben.", Toast.LENGTH_SHORT).show()
+        }.addOnFailureListener { exception ->
+            Log.e("MainActivity", "Fehler beim Einloggen des Besuchs: ", exception)
+            Toast.makeText(this, "Fehler beim Einloggen des Besuchs", Toast.LENGTH_SHORT).show()
         }
     }
+
     // Funktion zur Berechnung des Levels basierend auf den Punkten
     private fun calculateLevel(totalPoints: Long): Int {
         return when {
-            totalPoints >= 10000 -> 10
-            totalPoints >= 5000 -> 9
-            totalPoints >= 2500 -> 8
-            totalPoints >= 1000 -> 7
-            totalPoints >= 500 -> 6
-            totalPoints >= 250 -> 5
-            totalPoints >= 100 -> 4
-            totalPoints >= 50 -> 3
-            totalPoints >= 20 -> 2
+            totalPoints >= 16000 -> 10
+            totalPoints >= 8000 -> 9
+            totalPoints >= 4000 -> 8
+            totalPoints >= 2000 -> 7
+            totalPoints >= 1000 -> 6
+            totalPoints >= 500 -> 5
+            totalPoints >= 250 -> 4
+            totalPoints >= 100 -> 3
+            totalPoints >= 50 -> 2
             else -> 1
         }
     }
@@ -257,6 +269,7 @@ class MainActivity : AppCompatActivity() {
     private fun showLevelUpNotification(newLevel: Int) {
         Toast.makeText(this, "Glückwunsch! Du hast Level $newLevel erreicht!", Toast.LENGTH_LONG).show()
     }
+
     private fun updateUserLevelDisplay() {
         val userRef = db.collection("users").document(auth.currentUser?.uid ?: "")
         userRef.get().addOnSuccessListener { document ->

@@ -9,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -19,8 +18,8 @@ import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.thepublichistorian.heritagehunter.R
 import com.thepublichistorian.heritagehunter.databinding.FragmentHomeBinding
+import com.thepublichistorian.heritagehunter.MainActivity
 
 class HomeFragment : Fragment() {
 
@@ -139,11 +138,13 @@ class HomeFragment : Fragment() {
                     homeViewModel.places.observe(viewLifecycleOwner) { places ->
                         if (places != null && places.isNotEmpty()) {
                             binding.recyclerViewPlaces.adapter =
-                                PlacesAdapter(places, location.latitude, location.longitude)
+                                PlacesAdapter(places, location.latitude, location.longitude, requireActivity() as MainActivity) // Übergabe von MainActivity
                         } else {
-                            Toast.makeText(context, "Keine Orte gefunden", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Keine Orte gefunden", Toast.LENGTH_SHORT).show()
                         }
                     }
+                } else {
+                    Toast.makeText(requireContext(), "Standort konnte nicht ermittelt werden", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
